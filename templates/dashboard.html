@@ -1,0 +1,920 @@
+<!-- templates/dashboard.html - Vercel-ready dashboard -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Dashboard - Network Scanner</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#667eea">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --primary:#667eea; --secondary:#764ba2; --dark:#1a1a2e;
+  --success:#28a745; --warning:#ffc107; --danger:#dc3545; --info:#17a2b8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow-x:hidden}
+body{background:#f5f6fa;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  position:fixed;left:0;top:0;height:100vh;width:260px;
+  background:linear-gradient(135deg,var(--dark) 0%,#16213e 100%);
+  color:#fff;z-index:1000;overflow-y:auto;transition:transform .3s ease;
+}
+.sidebar::-webkit-scrollbar{width:5px}
+.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,.08)}
+.sidebar::-webkit-scrollbar-thumb{background:var(--primary);border-radius:5px}
+.sidebar-header{
+  padding:20px;text-align:center;border-bottom:1px solid rgba(255,255,255,.08);
+  position:sticky;top:0;background:linear-gradient(135deg,var(--dark) 0%,#16213e 100%);z-index:10;
+}
+.sidebar-header h4{margin:0;font-weight:800;letter-spacing:.5px}
+.sidebar-header small{opacity:.7}
+.sidebar-menu{padding:14px 0 60px}
+.sidebar-menu-item{
+  padding:13px 22px;margin:2px 8px;border-radius:10px;cursor:pointer;
+  display:flex;align-items:center;font-size:.95rem;transition:.18s;
+}
+.sidebar-menu-item i{width:26px;font-size:1rem}
+.sidebar-menu-item:hover{background:rgba(102,126,234,.22)}
+.sidebar-menu-item.active{background:linear-gradient(135deg,rgba(102,126,234,.45),rgba(118,75,162,.45));font-weight:600}
+.user-box{
+  padding:14px 18px;margin:10px 12px;border-radius:10px;
+  background:rgba(255,255,255,.06);font-size:.85rem;color:#cfd3e8;
+}
+.user-box strong{color:#fff;display:block;font-size:.95rem;margin-bottom:4px}
+
+/* ---------- Main ---------- */
+.main-content{margin-left:260px;padding:24px;min-height:100vh}
+.page-title{font-weight:800;margin-bottom:22px;color:#1a1a2e}
+.page-title small{font-weight:400;color:#6b7280}
+
+/* ---------- Cards ---------- */
+.stat-card{
+  background:#fff;border-radius:15px;padding:22px;
+  box-shadow:0 4px 14px rgba(0,0,0,.06);transition:.25s;height:100%;
+}
+.stat-card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.1)}
+.stat-icon{font-size:2rem;margin-bottom:8px;display:inline-block}
+.stat-num{font-size:1.9rem;font-weight:800;color:#1a1a2e;line-height:1.1}
+.stat-label{color:#6b7280;font-size:.9rem;margin-top:4px}
+
+/* ---------- Forms ---------- */
+.form-label{font-weight:600;font-size:.9rem;color:#374151}
+.form-control,.form-select{
+  border-radius:10px;padding:10px 14px;border:1px solid #e5e7eb;font-size:.94rem;
+}
+.form-control:focus,.form-select:focus{
+  border-color:var(--primary);box-shadow:0 0 0 3px rgba(102,126,234,.15);
+}
+.btn-primary-custom{
+  background:linear-gradient(135deg,var(--primary),var(--secondary));
+  border:none;color:#fff;border-radius:10px;padding:11px 18px;font-weight:600;
+  transition:.2s;
+}
+.btn-primary-custom:hover{color:#fff;transform:translateY(-1px);box-shadow:0 8px 20px rgba(102,126,234,.35)}
+.btn-primary-custom:disabled{opacity:.65;transform:none;box-shadow:none}
+
+/* ---------- Results ---------- */
+.results-wrap{max-height:520px;overflow-y:auto;border-radius:10px}
+.results-wrap::-webkit-scrollbar{width:8px}
+.results-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+table.results{width:100%;border-collapse:collapse;font-size:.9rem}
+table.results th{
+  background:#f3f4f6;position:sticky;top:0;padding:10px 12px;text-align:left;
+  font-weight:700;color:#374151;border-bottom:1px solid #e5e7eb;z-index:2;
+}
+table.results td{padding:10px 12px;border-bottom:1px solid #f1f2f6}
+table.results tr:hover td{background:#fafbff}
+.port-open{color:var(--success);font-weight:700}
+.port-closed{color:#9ca3af}
+.badge-service{background:var(--primary);color:#fff;padding:3px 9px;border-radius:20px;font-size:11px}
+.risk-critical{color:#b91c1c;font-weight:800}
+.risk-high{color:#ea580c;font-weight:700}
+.risk-medium{color:#ca8a04;font-weight:600}
+.risk-low{color:#16a34a}
+
+/* ---------- Progress modal ---------- */
+.scan-progress{
+  display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);
+  backdrop-filter:blur(3px);z-index:2000;align-items:center;justify-content:center;padding:16px;
+}
+.scan-progress.active{display:flex}
+.scan-progress-panel{
+  background:#fff;border-radius:18px;padding:30px;max-width:520px;width:100%;
+  text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.35);
+}
+.progress{height:24px;border-radius:12px;background:#eef0f7;overflow:hidden}
+.progress-bar{
+  background:linear-gradient(90deg,var(--primary),var(--secondary));
+  font-weight:700;font-size:.8rem;line-height:24px;transition:width .3s;
+}
+.progress-percent{font-size:26px;font-weight:800;margin-top:12px;color:var(--dark)}
+#scanStatus{color:#4b5563;font-size:.92rem;margin-top:6px;min-height:20px}
+
+/* ---------- Report items ---------- */
+.report-item{
+  border-left:4px solid var(--primary);padding:14px 16px;margin-bottom:12px;
+  background:#f9fafb;border-radius:10px;transition:.2s;
+}
+.report-item:hover{background:#eef1ff;transform:translateX(3px)}
+.vuln-item{border-left-color:var(--danger)}
+.sev{font-weight:800;text-transform:uppercase;font-size:11px;padding:3px 9px;border-radius:12px}
+.sev-CRITICAL{background:#fee2e2;color:#b91c1c}
+.sev-HIGH{background:#ffedd5;color:#c2410c}
+.sev-MEDIUM{background:#fef3c7;color:#92400e}
+.sev-LOW{background:#dcfce7;color:#166534}
+.sev-INFO{background:#dbeafe;color:#1e40af}
+
+/* ---------- Mobile ---------- */
+.mobile-menu-btn{
+  display:none;position:fixed;top:14px;left:14px;z-index:1100;
+  background:var(--primary);border:none;color:#fff;padding:10px 13px;border-radius:10px;cursor:pointer;
+}
+.sidebar-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;
+}
+.sidebar-backdrop.active{display:block}
+
+@media (max-width:900px){
+  .sidebar{transform:translateX(-100%);width:270px}
+  .sidebar.open{transform:translateX(0)}
+  .main-content{margin-left:0;padding:70px 16px 24px}
+  .mobile-menu-btn{display:block}
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile toggle -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+  <i class="fas fa-bars"></i>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h4><i class="fas fa-shield-alt"></i> NetScan</h4>
+    <small>Network Security Scanner</small>
+  </div>
+
+  <div class="user-box">
+    <strong id="sidebarUser">—</strong>
+    <span><i class="fas fa-circle text-success" style="font-size:8px"></i> Signed in</span>
+  </div>
+
+  <nav class="sidebar-menu">
+    <div class="sidebar-menu-item active" data-page="dashboard">
+      <i class="fas fa-tachometer-alt"></i> Dashboard
+    </div>
+    <div class="sidebar-menu-item" data-page="scanner">
+      <i class="fas fa-search"></i> Port Scanner
+    </div>
+    <div class="sidebar-menu-item" data-page="reports">
+      <i class="fas fa-chart-line"></i> Reports
+    </div>
+    <div class="sidebar-menu-item" data-page="vulnerabilities">
+      <i class="fas fa-bug"></i> Vulnerabilities
+    </div>
+    <div class="sidebar-menu-item" data-page="about">
+      <i class="fas fa-info-circle"></i> About
+    </div>
+    <div class="sidebar-menu-item" onclick="window.location.href='/'">
+      <i class="fas fa-home"></i> Home
+    </div>
+    <div class="sidebar-menu-item" onclick="logout()" style="color:#fca5a5">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </div>
+  </nav>
+</aside>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<main class="main-content">
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="dashboard-page" class="page-content">
+    <h2 class="page-title">
+      Dashboard <small id="welcomeName" class="ms-2"></small>
+    </h2>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <i class="fas fa-microchip stat-icon" style="color:var(--primary)"></i>
+          <div class="stat-num" id="total-scans">0</div>
+          <div class="stat-label">Total Scans</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <i class="fas fa-door-open stat-icon" style="color:var(--success)"></i>
+          <div class="stat-num" id="open-ports">0</div>
+          <div class="stat-label">Open Ports Found</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <i class="fas fa-exclamation-triangle stat-icon" style="color:#ea580c"></i>
+          <div class="stat-num" id="high-risk">0</div>
+          <div class="stat-label">High-Risk Findings</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-card">
+          <i class="fas fa-bug stat-icon" style="color:var(--danger)"></i>
+          <div class="stat-num" id="vulns-total">0</div>
+          <div class="stat-label">Vulnerabilities</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="stat-card">
+          <h5 class="mb-3"><i class="fas fa-chart-line text-primary"></i> Scan History (Duration &amp; Open Ports)</h5>
+          <canvas id="perfChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="stat-card">
+          <h5 class="mb-3"><i class="fas fa-chart-pie text-primary"></i> Port Distribution</h5>
+          <canvas id="portChart" height="200"></canvas>
+          <p class="text-muted small mb-0 mt-2" id="portChartHint">No scan data yet. Run a scan to populate this chart.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card mt-4">
+      <h5 class="mb-3"><i class="fas fa-clock text-primary"></i> Recent Scans</h5>
+      <div id="recentScans">
+        <div class="text-muted small">No scans yet.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCANNER ============ -->
+  <section id="scanner-page" class="page-content" style="display:none">
+    <h2 class="page-title"><i class="fas fa-search text-primary"></i> Advanced Port Scanner</h2>
+
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="stat-card">
+          <h5 class="mb-3">Scan Configuration</h5>
+          <form id="scan-form">
+            <div class="mb-3">
+              <label class="form-label">Target IP / Hostname</label>
+              <input type="text" class="form-control" id="target"
+                     placeholder="192.168.1.1 or example.com" required>
+              <small class="text-muted">Only public IPs / hostnames are reachable from the cloud scanner.</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Port Range</label>
+              <input type="text" class="form-control" id="port-range" value="1-1000"
+                     placeholder="1-1000, 80,443, 1-65535">
+              <small class="text-muted">Max 5,000 ports per scan on Vercel.</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Presets</label>
+              <div class="d-flex flex-wrap gap-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPreset('common')">Common</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPreset('web')">Web</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPreset('db')">Databases</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPreset('top1000')">Top 1000</button>
+              </div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Threads</label>
+                <input type="number" class="form-control" id="threads" value="100" min="1" max="200">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Timeout (s)</label>
+                <input type="number" class="form-control" id="timeout" value="1" step="0.5" min="0.5" max="5">
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="submit" class="btn btn-primary-custom flex-grow-1" id="startScanBtn">
+                <i class="fas fa-play"></i> Start Scan
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="stat-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Scan Results</h5>
+            <div id="scanActions" style="display:none">
+              <button class="btn btn-sm btn-outline-success" onclick="exportCurrent('json')">
+                <i class="fas fa-download"></i> JSON
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="exportCurrent('txt')">
+                <i class="fas fa-file-alt"></i> TXT
+              </button>
+            </div>
+          </div>
+          <div id="scan-summary" class="alert alert-info" style="display:none"></div>
+          <div id="scan-results" class="results-wrap">
+            <div class="text-muted text-center py-5">
+              <i class="fas fa-search fa-2x mb-2 d-block" style="opacity:.25"></i>
+              Configure and start a scan to see results
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REPORTS ============ -->
+  <section id="reports-page" class="page-content" style="display:none">
+    <h2 class="page-title"><i class="fas fa-chart-line text-primary"></i> Scan Reports</h2>
+    <div class="stat-card">
+      <div id="reportsList">
+        <div class="text-muted">Loading…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VULNERABILITIES ============ -->
+  <section id="vulnerabilities-page" class="page-content" style="display:none">
+    <h2 class="page-title"><i class="fas fa-bug text-primary"></i> Vulnerability Findings</h2>
+    <div class="stat-card">
+      <div id="vulnsList">
+        <div class="text-muted">Loading…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="about-page" class="page-content" style="display:none">
+    <h2 class="page-title"><i class="fas fa-info-circle text-primary"></i> About NetScan</h2>
+    <div class="stat-card">
+      <p><strong>NetScan</strong> is a free online network scanner and TCP port scanner. It runs a
+      multi-threaded TCP-connect scan from the cloud and identifies services running on discovered ports.</p>
+
+      <h6 class="mt-4">What works</h6>
+      <ul>
+        <li>TCP port scanning on public IPs and hostnames</li>
+        <li>Automatic service identification (80+ known ports)</li>
+        <li>Risk scoring for dangerous open ports</li>
+        <li>Scan history, JSON/TXT report export</li>
+      </ul>
+
+      <h6 class="mt-4">What does NOT work from the cloud</h6>
+      <ul>
+        <li>Private LAN scanning (10.x, 172.16-31.x, 192.168.x) — not reachable from the internet</li>
+        <li>ARP / MAC address discovery — requires local network access</li>
+        <li>ICMP ping sweeps — blocked in serverless environments</li>
+        <li>SYN / FIN / NULL / XMAS stealth scans — require raw sockets (not available)</li>
+      </ul>
+
+      <div class="alert alert-warning mt-4 mb-0">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Legal notice:</strong> Only scan systems you own or have explicit written permission to test.
+        Unauthorized port scanning is illegal in many jurisdictions.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════ PROGRESS MODAL ═══════════ -->
+<div id="scanProgress" class="scan-progress">
+  <div class="scan-progress-panel">
+    <div class="mb-2"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>
+    <h4 class="mb-2">Scanning in progress</h4>
+    <div class="progress mt-3">
+      <div class="progress-bar" id="progressBar" style="width:0%">0%</div>
+    </div>
+    <div class="progress-percent" id="progressPercent">0%</div>
+    <p id="scanStatus">Initializing…</p>
+  </div>
+</div>
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Global state
+   ═══════════════════════════════════════════════════════════════ */
+const PORT_NAMES = {
+  20:'FTP-Data',21:'FTP',22:'SSH',23:'Telnet',25:'SMTP',53:'DNS',67:'DHCP',68:'DHCP',
+  69:'TFTP',80:'HTTP',110:'POP3',111:'RPC',119:'NNTP',123:'NTP',135:'MSRPC',
+  137:'NetBIOS',138:'NetBIOS',139:'NetBIOS',143:'IMAP',161:'SNMP',179:'BGP',
+  194:'IRC',389:'LDAP',443:'HTTPS',445:'SMB',465:'SMTPS',500:'ISAKMP',514:'Syslog',
+  515:'LPD',520:'RIP',587:'SMTP-Sub',636:'LDAPS',993:'IMAPS',995:'POP3S',
+  1433:'MSSQL',1521:'Oracle',1723:'PPTP',2049:'NFS',2082:'cPanel',2083:'cPanel-SSL',
+  2181:'Zookeeper',3000:'Dev-Server',3306:'MySQL',3389:'RDP',3690:'SVN',4444:'Metasploit',
+  5432:'PostgreSQL',5500:'VNC',5601:'Kibana',5900:'VNC',5985:'WinRM',6379:'Redis',
+  6667:'IRC',7001:'WebLogic',8000:'HTTP-Alt',8008:'HTTP-Proxy',8080:'HTTP-Proxy',
+  8081:'HTTP-Alt',8443:'HTTPS-Alt',8888:'Dev-Server',27017:'MongoDB'
+};
+
+let perfChart = null;
+let portChart = null;
+let currentScanId = null;
+let currentScanResults = null;
+let currentScanMeta = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   Helpers
+   ═══════════════════════════════════════════════════════════════ */
+function getPortName(p){ return PORT_NAMES[parseInt(p)] || ('Port ' + p); }
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtDate(d){
+  if (!d) return '—';
+  try { return new Date(d).toLocaleString(); } catch(e){ return d; }
+}
+
+function showToast(msg, type){
+  type = type || 'info';
+  const el = document.createElement('div');
+  el.className = 'alert alert-' + type + ' position-fixed shadow';
+  el.style.cssText = 'top:20px;right:20px;z-index:3000;min-width:260px;border-radius:10px';
+  el.innerHTML = esc(msg) + '<button type="button" class="btn-close ms-3" onclick="this.parentElement.remove()"></button>';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+async function api(path, opts){
+  opts = opts || {};
+  const r = await fetch(path, Object.assign({ credentials:'same-origin' }, opts));
+  if (r.status === 401){ window.location.href = '/login'; throw new Error('unauth'); }
+  return r;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Sidebar / nav
+   ═══════════════════════════════════════════════════════════════ */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('sidebarBackdrop');
+document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('active');
+});
+backdrop.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('active');
+});
+
+document.querySelectorAll('.sidebar-menu-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    document.querySelectorAll('.sidebar-menu-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    const el = document.getElementById(page + '-page');
+    if (el) el.style.display = 'block';
+
+    if (window.innerWidth <= 900){
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('active');
+    }
+    if (page === 'dashboard') loadDashboard();
+    if (page === 'reports') loadReports();
+    if (page === 'vulnerabilities') loadVulns();
+  });
+});
+
+function logout(){ window.location.href = '/logout'; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Dashboard
+   ═══════════════════════════════════════════════════════════════ */
+async function loadDashboard(){
+  try {
+    const [scans, vulns] = await Promise.all([
+      api('/api/reports?type=scans').then(r => r.json()),
+      api('/api/reports?type=vulnerabilities').then(r => r.json())
+    ]);
+
+    const openTotal = scans.reduce((s, x) => s + (x.open_ports || 0), 0);
+    const highTotal = scans.reduce((s, x) => s + (x.high_risk_count || 0), 0);
+
+    document.getElementById('total-scans').textContent  = scans.length;
+    document.getElementById('open-ports').textContent   = openTotal;
+    document.getElementById('high-risk').textContent    = highTotal;
+    document.getElementById('vulns-total').textContent  = vulns.length;
+
+    // ─── Recent scans list ────────────────────────────────
+    const recent = document.getElementById('recentScans');
+    if (!scans.length){
+      recent.innerHTML = '<div class="text-muted small">No scans yet. Head to the Port Scanner to get started.</div>';
+    } else {
+      recent.innerHTML = scans.slice(0, 5).map(s => `
+        <div class="report-item">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <strong><i class="fas fa-bullseye"></i> ${esc(s.target)}</strong>
+              <div class="text-muted small">${fmtDate(s.start_time)}</div>
+            </div>
+            <div class="d-flex gap-2">
+              <span class="badge bg-primary">${s.open_ports || 0} open</span>
+              ${s.high_risk_count ? `<span class="badge bg-danger">${s.high_risk_count} high-risk</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ─── Performance chart ────────────────────────────────
+    const labels = scans.slice(-10).map(s => new Date(s.start_time).toLocaleDateString());
+    const durations = scans.slice(-10).map(s => {
+      if (!s.start_time || !s.end_time) return 0;
+      return ((new Date(s.end_time) - new Date(s.start_time)) / 1000);
+    });
+    const opens = scans.slice(-10).map(s => s.open_ports || 0);
+
+    const ctx1 = document.getElementById('perfChart').getContext('2d');
+    if (perfChart) perfChart.destroy();
+    perfChart = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Duration (sec)',
+            data: durations,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102,126,234,.12)',
+            tension: .35,
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Open ports',
+            data: opens,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,.1)',
+            tension: .35,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y:  { position: 'left',  beginAtZero: true, title: { display: true, text: 'sec' } },
+          y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'ports' } }
+        }
+      }
+    });
+
+    // ─── Port distribution chart ──────────────────────────
+    const portCounts = {};
+    scans.forEach(s => {
+      if (!s.result_json) return;
+      let results;
+      try { results = JSON.parse(s.result_json); } catch(e){ return; }
+      Object.keys(results).forEach(p => {
+        const info = results[p];
+        if (!info || info.open !== true) return;
+        const label = getPortName(p);
+        portCounts[label] = (portCounts[label] || 0) + 1;
+      });
+    });
+
+    const entries = Object.entries(portCounts).sort((a,b) => b[1] - a[1]).slice(0, 8);
+    const portCtx = document.getElementById('portChart').getContext('2d');
+    if (portChart) portChart.destroy();
+
+    if (!entries.length){
+      document.getElementById('portChartHint').textContent = 'No open ports recorded yet.';
+      portChart = new Chart(portCtx, {
+        type: 'doughnut',
+        data: { labels: ['No data'], datasets: [{ data: [1], backgroundColor: ['#e5e7eb'] }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    } else {
+      document.getElementById('portChartHint').textContent =
+        'Top open ports across your scans (' + entries.length + ' shown).';
+      const palette = ['#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#43e97b','#fd7e14','#17a2b8'];
+      portChart = new Chart(portCtx, {
+        type: 'doughnut',
+        data: {
+          labels: entries.map(e => e[0]),
+          datasets: [{ data: entries.map(e => e[1]), backgroundColor: palette }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+        }
+      });
+    }
+  } catch (e) {
+    console.error('dashboard load error', e);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Port Scanner
+   ═══════════════════════════════════════════════════════════════ */
+const PRESETS = {
+  common:  '21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5432,5900,6379,8080,27017',
+  web:     '80,81,82,83,84,85,86,87,88,89,443,8080,8081,8082,8083,8084,8085,8086,8087,8088,8089,8443,9443',
+  db:      '1433,1434,3306,3307,5432,5433,6379,6380,27017,27018,27019',
+  top1000: '1-1000'
+};
+function setPreset(k){
+  document.getElementById('port-range').value = PRESETS[k] || '1-1000';
+}
+
+document.getElementById('scan-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const target = document.getElementById('target').value.trim();
+  const portRange = document.getElementById('port-range').value.trim() || '1-1000';
+  const threads = parseInt(document.getElementById('threads').value) || 100;
+  const timeout = parseFloat(document.getElementById('timeout').value) || 1;
+
+  if (!target){
+    showToast('Please enter a target.', 'warning');
+    return;
+  }
+
+  // Show progress modal
+  document.getElementById('scanProgress').classList.add('active');
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressBar').textContent = '0%';
+  document.getElementById('progressPercent').textContent = '0%';
+  document.getElementById('scanStatus').textContent = 'Connecting to scanner…';
+
+  const btn = document.getElementById('startScanBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning…';
+
+  // Fake progress animation (real scan happens in one request)
+  let fake = 0;
+  const fakeTimer = setInterval(() => {
+    fake = Math.min(95, fake + Math.random() * 6);
+    document.getElementById('progressBar').style.width = fake + '%';
+    document.getElementById('progressBar').textContent = Math.floor(fake) + '%';
+    document.getElementById('progressPercent').textContent = Math.floor(fake) + '%';
+  }, 350);
+
+  try {
+    const r = await api('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target,
+        port_range: portRange,
+        threads,
+        timeout
+      })
+    });
+    const data = await r.json();
+
+    clearInterval(fakeTimer);
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('progressBar').textContent = '100%';
+    document.getElementById('progressPercent').textContent = '100%';
+
+    if (!data.success){
+      document.getElementById('scanStatus').textContent = data.error || 'Scan failed';
+      showToast(data.error || 'Scan failed', 'danger');
+      setTimeout(() => document.getElementById('scanProgress').classList.remove('active'), 1200);
+      return;
+    }
+
+    currentScanId = data.scan_id;
+    currentScanResults = data.results;
+    currentScanMeta = data;
+
+    document.getElementById('scanStatus').textContent =
+      'Completed — ' + data.open_ports + ' open ports in ' + data.duration_sec.toFixed(1) + 's';
+    setTimeout(() => {
+      document.getElementById('scanProgress').classList.remove('active');
+      renderScanResults(data);
+    }, 700);
+
+    showToast('Scan complete: ' + data.open_ports + ' open ports found', 'success');
+  } catch (err) {
+    clearInterval(fakeTimer);
+    document.getElementById('scanProgress').classList.remove('active');
+    showToast('Network error — please retry', 'danger');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Start Scan';
+  }
+});
+
+function renderScanResults(data){
+  const results = data.results || {};
+  const summary = document.getElementById('scan-summary');
+  const wrap    = document.getElementById('scan-results');
+  const actions = document.getElementById('scanActions');
+
+  const openPorts   = Object.keys(results).filter(p => results[p].open === true);
+  const highRisk    = openPorts.filter(p => results[p].risk === 'CRITICAL' || results[p].risk === 'HIGH');
+
+  summary.style.display = 'block';
+  summary.className = 'alert ' + (openPorts.length ? 'alert-info' : 'alert-success');
+  summary.innerHTML = `
+    <strong>Target:</strong> ${esc(data.target)} &nbsp;·&nbsp;
+    <strong>Ports scanned:</strong> ${data.total_ports} &nbsp;·&nbsp;
+    <strong>Open:</strong> ${data.open_ports} &nbsp;·&nbsp;
+    <strong>Duration:</strong> ${data.duration_sec.toFixed(2)}s
+    ${highRisk.length ? `<br><strong class="text-danger">High-risk ports:</strong> ${highRisk.map(p => esc(p)+' ('+esc(getPortName(p))+')').join(', ')}` : ''}
+  `;
+
+  if (!openPorts.length){
+    wrap.innerHTML = '<div class="alert alert-success">No open TCP ports found in the scanned range.</div>';
+    actions.style.display = 'none';
+    return;
+  }
+
+  actions.style.display = 'block';
+
+  let html = '<table class="results"><thead><tr>' +
+             '<th>Port</th><th>Service</th><th>Protocol</th><th>Status</th><th>Risk</th><th>Banner</th>' +
+             '</tr></thead><tbody>';
+
+  openPorts
+    .sort((a,b) => parseInt(a) - parseInt(b))
+    .forEach(p => {
+      const i = results[p];
+      const risk = (i.risk || 'LOW');
+      const riskClass = 'risk-' + risk.toLowerCase();
+      html += `
+        <tr>
+          <td><strong>${esc(p)}</strong></td>
+          <td>${esc(i.service || getPortName(p))}</td>
+          <td>${esc(i.protocol || 'tcp')}</td>
+          <td class="port-open">OPEN</td>
+          <td class="${riskClass}">${esc(risk)}</td>
+          <td class="text-truncate" style="max-width:220px"><small>${esc((i.banner || '—').substring(0,60))}</small></td>
+        </tr>`;
+    });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+async function exportCurrent(fmt){
+  if (!currentScanId){
+    showToast('No scan to export', 'warning');
+    return;
+  }
+  try {
+    const r = await api('/api/export-report/' + currentScanId + '?format=' + fmt);
+    if (fmt === 'json'){
+      const data = await r.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      triggerDownload(blob, 'scan_' + currentScanId + '.json');
+    } else {
+      const blob = await r.blob();
+      triggerDownload(blob, 'scan_' + currentScanId + '.txt');
+    }
+    showToast('Report downloaded', 'success');
+  } catch(e){
+    showToast('Export failed', 'danger');
+  }
+}
+
+function triggerDownload(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Reports
+   ═══════════════════════════════════════════════════════════════ */
+async function loadReports(){
+  const wrap = document.getElementById('reportsList');
+  wrap.innerHTML = '<div class="text-muted">Loading…</div>';
+  try {
+    const scans = await api('/api/reports?type=scans').then(r => r.json());
+    if (!scans.length){
+      wrap.innerHTML = '<div class="alert alert-info mb-0">No scans yet. Go to the Port Scanner tab to run one.</div>';
+      return;
+    }
+    wrap.innerHTML = scans.map(s => {
+      const dur = (s.start_time && s.end_time)
+        ? ((new Date(s.end_time) - new Date(s.start_time)) / 1000).toFixed(2)
+        : '—';
+      return `
+        <div class="report-item">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <strong><i class="fas fa-bullseye"></i> ${esc(s.target)}</strong>
+              <div class="text-muted small">${fmtDate(s.start_time)} · ${dur}s · ${s.open_ports} open ports</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              <button class="btn btn-sm btn-outline-primary" onclick="exportById(${s.id},'json')">JSON</button>
+              <button class="btn btn-sm btn-outline-secondary" onclick="exportById(${s.id},'txt')">TXT</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e){
+    wrap.innerHTML = '<div class="alert alert-danger mb-0">Failed to load reports.</div>';
+  }
+}
+
+async function exportById(id, fmt){
+  try {
+    const r = await api('/api/export-report/' + id + '?format=' + fmt);
+    if (fmt === 'json'){
+      const data = await r.json();
+      triggerDownload(new Blob([JSON.stringify(data, null, 2)], { type:'application/json' }),
+                      'scan_' + id + '.json');
+    } else {
+      triggerDownload(await r.blob(), 'scan_' + id + '.txt');
+    }
+    showToast('Downloaded', 'success');
+  } catch(e){ showToast('Export failed', 'danger'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Vulnerabilities
+   ═══════════════════════════════════════════════════════════════ */
+async function loadVulns(){
+  const wrap = document.getElementById('vulnsList');
+  wrap.innerHTML = '<div class="text-muted">Loading…</div>';
+  try {
+    const vulns = await api('/api/reports?type=vulnerabilities').then(r => r.json());
+    if (!vulns.length){
+      wrap.innerHTML = '<div class="alert alert-success mb-0">No vulnerabilities recorded yet — nice!</div>';
+      return;
+    }
+    wrap.innerHTML = vulns.map(v => {
+      const sev = (v.severity || 'LOW').toUpperCase();
+      return `
+        <div class="report-item vuln-item">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <strong>${esc(v.host)}:${esc(v.port)}</strong>
+              <span class="sev sev-${esc(sev)} ms-2">${esc(sev)}</span>
+            </div>
+            <div class="text-muted small">${fmtDate(v.discovered_at)}</div>
+          </div>
+          <div class="mt-1">${esc(v.vulnerability || 'Open service')}</div>
+          ${v.recommendation ? `<div class="text-muted small mt-1"><i class="fas fa-lightbulb"></i> ${esc(v.recommendation)}</div>` : ''}
+        </div>`;
+    }).join('');
+  } catch(e){
+    wrap.innerHTML = '<div class="alert alert-danger mb-0">Failed to load vulnerabilities.</div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Boot
+   ═══════════════════════════════════════════════════════════════ */
+(function boot(){
+  const params = new URLSearchParams(location.search);
+  const username = params.get('u') || localStorage.getItem('netscan_user') || '';
+  if (username){
+    document.getElementById('sidebarUser').textContent = username;
+    document.getElementById('welcomeName').textContent = '— ' + username;
+    localStorage.setItem('netscan_user', username);
+  }
+
+  // Land on the page indicated by ?page= (set by Flask routes /scanner, /reports)
+  const page = params.get('page');
+  if (page && document.getElementById(page + '-page')){
+    document.querySelectorAll('.sidebar-menu-item').forEach(i => i.classList.remove('active'));
+    const item = document.querySelector('.sidebar-menu-item[data-page="' + page + '"]');
+    if (item) item.classList.add('active');
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    document.getElementById(page + '-page').style.display = 'block';
+    if (page === 'reports') loadReports();
+    if (page === 'vulnerabilities') loadVulns();
+  } else {
+    loadDashboard();
+  }
+
+  // Chart resize
+  window.addEventListener('resize', () => {
+    if (perfChart) perfChart.resize();
+    if (portChart) portChart.resize();
+  });
+})();
+</script>
+</body>
+</html>

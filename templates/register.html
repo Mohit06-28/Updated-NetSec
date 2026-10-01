@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Free Account - Network Scanner</title>
+<meta name="description" content="Create a free account on the #1 online network scanner. Register with email or phone, no OTP required.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://YOUR-DOMAIN.vercel.app/register">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+body{background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;font-family:'Segoe UI',sans-serif;padding:30px 0}
+.reg-card{max-width:480px;margin:30px auto;background:#fff;border-radius:20px;padding:38px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.form-control{border-radius:10px;padding:12px 15px;border:1px solid #e0e0e0}
+.form-control:focus{border-color:#667eea;box-shadow:0 0 0 .2rem rgba(102,126,234,.25)}
+.btn-reg{background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:10px;padding:12px;font-weight:600;color:#fff;width:100%}
+.btn-reg:hover{opacity:.95;color:#fff}
+.strength{height:5px;border-radius:3px;margin-top:6px;transition:.3s}
+.s0{background:#eee}.s1{width:25%;background:#dc3545}.s2{width:50%;background:#ffc107}.s3{width:75%;background:#28a745}.s4{width:100%;background:#20c997}
+.tab-pill{border:1px solid #e0e0e0;border-radius:30px;padding:8px 18px;cursor:pointer;font-size:14px;margin-right:8px;transition:.2s;user-select:none}
+.tab-pill.active{background:#667eea;color:#fff;border-color:#667eea}
+#msg{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="reg-card">
+    <div class="text-center mb-4">
+      <i class="fas fa-shield-alt fa-3x" style="color:#667eea"></i>
+      <h3 class="mt-3">Create Free Account</h3>
+      <p class="text-muted mb-0">No OTP. Instant access to the network scanner.</p>
+    </div>
+
+    <div class="alert alert-danger" id="msg"></div>
+
+    <form id="regForm" novalidate>
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-user"></i> Username <small class="text-muted">(optional)</small></label>
+        <input type="text" class="form-control" id="username" placeholder="john_doe" autocomplete="username">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
+        <input type="email" class="form-control" id="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <div class="text-center my-2"><small class="text-muted">— or —</small></div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-phone"></i> Phone <small class="text-muted">(optional if email given)</small></label>
+        <input type="tel" class="form-control" id="phone" placeholder="+15551234567" autocomplete="tel">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-lock"></i> Password</label>
+        <div class="input-group">
+          <input type="password" class="form-control" id="password" required autocomplete="new-password">
+          <button type="button" class="btn btn-outline-secondary" id="t1"><i class="far fa-eye" id="i1"></i></button>
+        </div>
+        <div class="strength s0" id="strength"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-lock"></i> Confirm Password</label>
+        <div class="input-group">
+          <input type="password" class="form-control" id="confirm_password" required autocomplete="new-password">
+          <button type="button" class="btn btn-outline-secondary" id="t2"><i class="far fa-eye" id="i2"></i></button>
+        </div>
+      </div>
+
+      <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" id="terms" required>
+        <label class="form-check-label" for="terms">I agree to the Terms of Service</label>
+      </div>
+
+      <button type="submit" class="btn btn-reg" id="submitBtn">
+        <i class="fas fa-user-plus"></i> Create Account
+      </button>
+    </form>
+
+    <hr class="my-4">
+    <p class="text-center mb-0">Already have an account? <a href="/login">Login here</a></p>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  function toggle(a,b,c){$(a).onclick=()=>{const i=$(b),ic=$(c);if(i.type==='password'){i.type='text';ic.className='far fa-eye-slash';}else{i.type='password';ic.className='far fa-eye';}};}
+  toggle('t1','password','i1'); toggle('t2','confirm_password','i2');
+
+  $('password').addEventListener('input', e => {
+    const p = e.target.value; let s=0;
+    if(p.length>=8)s++;
+    if(/[A-Z]/.test(p))s++;
+    if(/[a-z]/.test(p))s++;
+    if(/\d/.test(p))s++;
+    if(/[^A-Za-z0-9]/.test(p))s++;
+    $('strength').className = 'strength s'+s;
+  });
+
+  function showErr(msg){ const m=$('msg'); m.textContent=msg; m.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
+
+  $('regForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    $('msg').style.display='none';
+    const email = $('email').value.trim();
+    const phone = $('phone').value.trim();
+    if (!email && !phone) return showErr('Please provide an email or a phone number.');
+    if (!$('terms').checked) return showErr('Please accept the Terms of Service.');
+    if ($('password').value !== $('confirm_password').value) return showErr('Passwords do not match.');
+
+    const btn = $('submitBtn'); const orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+    try {
+      const r = await fetch('/register', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify({
+          username: $('username').value.trim(),
+          email, phone,
+          password: $('password').value,
+          confirm_password: $('confirm_password').value
+        })
+      });
+      const d = await r.json();
+      if (d.success) { window.location.href = d.redirect || '/dashboard'; }
+      else showErr(d.error || 'Registration failed');
+    } catch(err){ showErr('Network error. Try again.'); }
+    finally { btn.disabled=false; btn.innerHTML=orig; }
+  });
+</script>
+</body>
+</html>
